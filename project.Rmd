@@ -1,0 +1,1576 @@
+---
+title: "Untitled"
+output: pdf_document
+date: "2025-04-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+data <- read_csv("C:/Users/rliog/Downloads/train_cleaned.csv")
+test<- read_csv("C:/Users/rliog/Downloads/test_cleaned.csv")
+
+```
+
+ 
+
+```{r}
+#imput missing valie for clock cpeed with mean
+data$`CPU clock speed (GHz)`[is.na(data$`CPU clock speed (GHz)`)] <- mean(data$`CPU clock speed (GHz)`, na.rm = TRUE)
+#remove missing values
+data <- na.omit(data)
+
+data$screen_sq=data$screen^2
+data$`RAM size_sq`=data$`RAM size`^2
+#drop resolution2 and CPU_cores_2 from data
+data <- subset(data, select = -c(resolution2, CPU_cores_2))
+
+
+
+
+```
+
+ 
+
+
+```{r}
+#confirm if data_test have same columns
+test <- test[, colnames(data)]
+#check if data_test have same columns
+if (all(colnames(data) == colnames(test))) {
+  print("data_test has same columns as data")
+} else {
+  print("data_test does not have same columns as data")
+}
+
+
+```
+
+
+```{r}
+lm1 <- lm(log(buynow_price) ~ .,data=data)
+```
+
+
+
+```{r}
+lm2 <- lm(log(buynow_price) ~ .^2,data=data)
+summary(lm2)
+```
+ 
+
+
+
+
+```{r}
+#add regularization to lm2
+library(glmnet)
+# Convert the data to a matrix format
+x <- model.matrix(log(buynow_price) ~ .^2, data = data)[, -1]
+y <- log(data$buynow_price)
+# Fit the Lasso model
+lasso_model <- glmnet(x, y, alpha = 1)
+#Fit Ridge model
+ridge_model <- glmnet(x, y, alpha = 0)
+# Perform cross-validation to find the optimal lambda
+cv_model <- cv.glmnet(x, y, alpha = 0)
+
+# Perform cross-validation to find the optimal lambda
+#cv_model <- cv.glmnet(x, y, alpha = 1)
+# Get the best lambda value
+best_lambda <- cv_model$lambda.min
+# Fit the Lasso model with the best lambda
+lasso_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+# Fit the Ridge model with the best lambda
+ridge_model <- glmnet(x, y, alpha = 0, lambda = best_lambda)
+# Make predictions on the test set
+x_test <- model.matrix(log(buynow_price) ~ .^2, data = test)[, -1]
+
+ 
+```
+
+```{r}
+predictions <- exp(predict(lasso_model, s = best_lambda, newx = x_test))
+
+#ridge model
+predictions <- exp(predict(ridge_model, s = best_lambda, newx = x_test))
+# Calculate R2
+r2 <- 1 - sum((test$buynow_price - predictions)^2) / sum((test$buynow_price - mean(test$buynow_price))^2)
+# Print R2
+print(paste("R2:", r2))
+```
+
+
+
+
+```{r}
+#read data
+library(readr)
+data2 <- read_csv("C:/Users/rliog/Downloads/data2.csv")
+ 
+ 
+ 
+
+```
+
+
+
+
+```{r}
+#write data4 to file
+write.csv(data3, "C:/Users/rliog/Downloads/data3_new.csv", row.names = FALSE)
+
+
+
+
+
+```
+
+
+```{r}
+#add buynow_price to data
+data4$buynow_price <- data$buynow_price
+```
+
+
+```{r}
+#split data4 into train test
+n <- nrow(data4)
+fl=floor(0.8*n)
+# randomly sample 70% of rows for training set
+index <- sample(1:n, fl)
+train=data4[index, ]
+test=data4[-index, ]
+#convert train and test to data frames
+train <- as.data.frame(train)
+test <- as.data.frame(test)
+
+
+```
+
+
+```{r}
+lm1=lm((buynow_price) ~ ., data = data)
+summary(lm1)
+```
+
+
+```{r}
+lm2=lm(log(buynow_price) ~.^2, data = data)
+summary(lm2)
+```
+
+ 
+
+
+```{r}
+#read file
+library(readr)
+#data <- read_csv("C:/Users/rliog/Downloads/laptop_new.csv")
+lm2=lm(log(buynow_price) ~.^2, data = train)
+summary(lm2)
+#plot(lmtry)
+```
+ 
+
+ 
+
+```{r}
+#shapiro
+#shapiro wilk test
+shapiro.test(lmtry$residuals)
+
+```
+
+
+
+
+```{r}
+#evaluate on test set
+predictions <- exp(predict(lm2, newdata = test))
+# Calculate R2
+r2 <- 1 - sum((test$buynow_price - predictions)^2) / sum((test$buynow_price - mean(test$buynow_price))^2)
+# Print R2
+print(paste("R2:", r2))
+
+
+
+```
+
+```{r}
+predictions <- predict(lm1, newdata = test)
+actual=(log(test$buynow_price))
+# Calculate R2
+r2 <- 1 - sum((actual - predictions)^2) / sum((actual - mean(actual))^2)
+# Print R2
+print(paste("R2:", r2))
+```
+
+
+```{r}
+#add regulariztion to lm2
+library(glmnet)
+# Convert the data to a matrix format
+x <- model.matrix(log(buynow_price) ~ ., data = data)[, -1]
+y <- log(data$buynow_price)
+# Fit the Lasso model
+lasso_model <- glmnet(x, y, alpha = 1)
+# Perform cross-validation to find the optimal lambda
+cv_model <- cv.glmnet(x, y, alpha = 1)
+# Get the best lambda value
+best_lambda <- cv_model$lambda.min
+# Fit the Lasso model with the best lambda
+lasso_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+# Make predictions on the test set
+x_test <- model.matrix(log(buynow_price) ~ ., data = data_test)[, -1]
+predictions <- exp(predict(lasso_model, s = best_lambda, newx = x_test))
+# Calculate R2
+r2 <- 1 - sum((data_test$buynow_price - predictions)^2) / sum((data_test$buynow_price - mean(data_test$buynow_price))^2)
+# Print R2
+print(paste("R2:", r2))
+
+```
+
+
+
+
+
+
+```{r}
+#convert all categorical variables to factors
+data <- data %>%
+  mutate(across(where(is.character), as.factor))
+
+
+```
+
+
+```{r}
+#convert all boolean variables to factors with values 1 and 0
+data <- data %>%
+  mutate(across(where(is.logical), as.factor)) %>%
+  mutate(across(where(is.factor), ~ as.numeric(.x) - 1))
+
+```
+
+
+```{r}
+#split data into training and testing sets
+n <- nrow(data)
+
+fl=floor(0.7*n)
+ 
+# randomly sample 70% of rows for training set
+index <- sample(1:n, fl)
+train=data[index, ]
+test=data[-index, ]
+
+#convert train and test to data frames
+ 
+```
+
+
+```{r}
+#read in data
+library(readr)
+data <- read_csv("C:/Users/rliog/Downloads/train_dataset23.csv")
+```
+
+
+
+```{r}
+lm2 <- lm(log(buynow_price) ~ .^2
+-numeric_keyboard:`drive type_hdd`                                                                 
+-numeric_keyboard:`drive type_ssd`                                                                 
+-numeric_keyboard:`drive type_ssd + hdd`                                                           
+-numeric_keyboard:CPU_cores_2                                                                      
+-numeric_keyboard:CPU_cores_4 
+
+-illuminated_keyboard:`drive type_hdd`                                                             
+-illuminated_keyboard:`drive type_ssd`                                                             
+-illuminated_keyboard:`drive type_ssd + hdd`                                                       
+-illuminated_keyboard:CPU_cores_2                                                                  
+-illuminated_keyboard:CPU_cores_4                                                                  
+-illuminated_keyboard:`CPU model_amd a6`
+
+-keyboard:`CPU model_intel core i3`                                                                
+-keyboard:`CPU model_intel core i5`                                                                
+-keyboard:`CPU model_intel core i7`                                                                
+-keyboard:`RAM type_ddr3l`                                                                         
+-keyboard:`RAM type_ddr4`                                                                          
+-illuminated_keyboard:numeric_keyboard                                                             
+-illuminated_keyboard:touchpad                                                                     
+-illuminated_keyboard:SD_card_reader
+
+-keyboard:illuminated_keyboard                                                                     
+-keyboard:numeric_keyboard                                                                         
+-keyboard:touchpad                                                                                 
+-keyboard:SD_card_reader                                                                           
+-keyboard:camera                                                                                   
+-keyboard:speakers                                                                                 
+-keyboard:resolution1  
+
+-keyboard:`graphic card type_integrated graphics`                                                  
+-keyboard:`operating system_['no system']`                                                         
+-keyboard:`operating system_['windows 10 home', 'other']`                                          
+-keyboard:`operating system_['windows 10 home']`                                                   
+-keyboard:`operating system_['windows 10 professional']`  
+
+-keyboard:illuminated_keyboard                                                                     
+-keyboard:numeric_keyboard                                                                         
+-keyboard:touchpad                                                                                 
+-keyboard:SD_card_reader                                                                           
+-keyboard:camera                                                                                   
+-keyboard:speakers                                                                                 
+-keyboard:resolution1 
+
+-`RAM size`:`graphic card type_integrated graphics`                                                
+-`RAM size`:`operating system_['no system']`                                                       
+-`RAM size`:`operating system_['windows 10 home', 'other']`                                        
+-`RAM size`:`operating system_['windows 10 home']`                                                 
+-`RAM size`:`operating system_['windows 10 professional']`                                         
+-`RAM size`:`drive type_hdd`                                                                       
+-`RAM size`:`drive type_ssd`                                                                       
+-`RAM size`:`drive type_ssd + hdd`                                                                 
+-`RAM size`:CPU_cores_2                                                                            
+-`RAM size`:CPU_cores_4                                                                            
+-`RAM size`:`CPU model_amd a6`
+
+-`RAM size`:touchpad                                                                               
+-`RAM size`:SD_card_reader                                                                         
+-`RAM size`:camera                                                                                 
+-`RAM size`:speakers    
+
+-`drive memory size (GB)`:camera                                                                   
+-`drive memory size (GB)`:speakers                                                                 
+-`drive memory size (GB)`:resolution1                                                              
+-`drive memory size (GB)`:resolution2                                                              
+-`drive memory size (GB)`:`graphic card type_integrated graphics`                                  
+-`drive memory size (GB)`:`operating system_['no system']`
+
+-`CPU clock speed (GHz)`:`RAM size`                                                                
+-`CPU clock speed (GHz)`:screen                                                                    
+-`CPU clock speed (GHz)`:keyboard                                                                  
+-`CPU clock speed (GHz)`:illuminated_keyboard                                                      
+-`CPU clock speed (GHz)`:numeric_keyboard
+
+-SD_card_reader:`operating system_['no system']`                                                   
+-SD_card_reader:`operating system_['windows 10 home', 'other']`                                    
+-SD_card_reader:`operating system_['windows 10 home']`                                             
+-SD_card_reader:`operating system_['windows 10 professional']`                                     
+-SD_card_reader:`drive type_hdd`                                                                   
+-SD_card_reader:`drive type_ssd`                                                                   
+-SD_card_reader:`drive type_ssd + hdd`                                                             
+-SD_card_reader:CPU_cores_2                                                                        
+-SD_card_reader:CPU_cores_4                                                                        
+-SD_card_reader:`CPU model_amd a6`  
+
+-touchpad:`CPU model_amd a6`                                                                       
+-touchpad:`CPU model_intel core i3`                                                                
+-touchpad:`CPU model_intel core i5`                                                                
+-touchpad:`CPU model_intel core i7`                                                                
+-touchpad:`RAM type_ddr3l`                                                                         
+-touchpad:`RAM type_ddr4`                                                                          
+-SD_card_reader:camera    
+
+-touchpad:resolution1                                                                              
+-touchpad:resolution2                                                                              
+-touchpad:`graphic card type_integrated graphics`                                                  
+-touchpad:`operating system_['no system']`                                                         
+-touchpad:`operating system_['windows 10 home', 'other']`                                          
+-touchpad:`operating system_['windows 10 home']`                                                   
+-touchpad:`operating system_['windows 10 professional']`                                           
+-touchpad:`drive type_hdd`                                                                         
+
+
+, data = data)
+summary(lm2)
+```
+
+
+```{r}
+#update lm2
+lm2 <- update(lm2, . ~ . -`CPU clock speed (GHz)`:camera                                                                    
+-`CPU clock speed (GHz)`:speakers                                                                  
+-`CPU clock speed (GHz)`:resolution1                                                               
+-`CPU clock speed (GHz)`:resolution2  , data=data)
+summary(lm2)
+```
+
+```{r}
+lm2 <- update(lm2, . ~ .
+-speakers:`operating system_['no system']`                                                         
+-speakers:`operating system_['windows 10 home', 'other']`                                          
+-speakers:`operating system_['windows 10 home']`                                                   
+-speakers:`operating system_['windows 10 professional']`  
+
+-camera:`RAM type_ddr4`                                                                            
+-speakers:resolution1                                                                              
+-speakers:resolution2 
+
+-camera:speakers                                                                                   
+-camera:resolution1                                                                                
+-camera:resolution2                                                                                
+-camera:`graphic card type_integrated graphics`                                                    
+-camera:`operating system_['no system']`             
+
+-touchpad:`drive type_ssd`                                                                         
+-touchpad:`drive type_ssd + hdd`                                                                   
+-touchpad:CPU_cores_2                                                                              
+-touchpad:CPU_cores_4      
+
+-`drive memory size (GB)`:`CPU model_intel core i5`                                                
+-`drive memory size (GB)`:`CPU model_intel core i7`                                                
+-`drive memory size (GB)`:`RAM type_ddr3l`                                                         
+-`drive memory size (GB)`:`RAM type_ddr4`                                                          
+-`RAM size`:screen                                                                                 
+-`RAM size`:keyboard       
+
+-`CPU clock speed (GHz)`:`operating system_['no system']`                                          
+-`CPU clock speed (GHz)`:`operating system_['windows 10 home', 'other']`                           
+-`CPU clock speed (GHz)`:`operating system_['windows 10 home']`                                    
+-`CPU clock speed (GHz)`:`operating system_['windows 10 professional']`                            
+-`CPU clock speed (GHz)`:`drive type_hdd` ,
+data=data)
+summary(lm2)
+
+
+
+
+```
+
+```{r}
+#update lm2
+lm2 <- update(lm2, . ~ .
+- SD_card_reader:`CPU model_intel core i3`                                                          
+- SD_card_reader:`CPU model_intel core i5`                                                          
+- SD_card_reader:`CPU model_intel core i7`                                                          
+- SD_card_reader:`RAM type_ddr3l`    
+
+- camera:CPU_cores_4 
+
+- speakers:`CPU model_intel core i5`                                                                
+- speakers:`CPU model_intel core i7` 
+
+                                                              
+
+,data=data)
+summary(lm2)
+
+```
+
+
+```{r}
+#update lm2
+lm2 <- update(lm2, . ~ .
+              
+-resolution2:`RAM type_ddr4`                                                                       
+-`graphic card type_integrated graphics`:`operating system_['no system']`                          
+-`graphic card type_integrated graphics`:`operating system_['windows 10 home', 'other']`
+
+-resolution2:`drive type_ssd + hdd`                                                                
+-resolution2:CPU_cores_2                                                                           
+-resolution2:CPU_cores_4 
+
+-resolution1:`drive type_ssd + hdd`                                                                
+-resolution1:CPU_cores_2                                                                           
+-resolution1:CPU_cores_4       
+
+-`CPU clock speed (GHz)`:`drive type_ssd + hdd`                                                    
+-`CPU clock speed (GHz)`:CPU_cores_2 
+
+-`operating system_['windows 10 home']`                                                            
+-`operating system_['windows 10 professional']` 
+,data=data)
+summary(lm2)
+```
+
+```{r}
+#update lm2
+lm2 <- update(lm2, . ~ .
+
+-`graphic card type_integrated graphics`:`drive type_hdd`                                          
+-`graphic card type_integrated graphics`:`drive type_ssd`                                          
+-`graphic card type_integrated graphics`:`drive type_ssd + hdd`                                    
+-`graphic card type_integrated graphics`:CPU_cores_2                                               
+-`graphic card type_integrated graphics`:CPU_cores_4                                               
+-`graphic card type_integrated graphics`:`CPU model_amd a6` 
+,data=data)
+summary(lm2)
+```
+
+```{r}
+#update lm2
+lm2 <- update(lm2, . ~ .
+              
+-`graphic card type_integrated graphics`:`CPU model_intel core i3`                                 
+-`graphic card type_integrated graphics`:`CPU model_intel core i5`                                 
+-`graphic card type_integrated graphics`:`CPU model_intel core i7`                                 
+-`graphic card type_integrated graphics`:`RAM type_ddr3l`                                          
+-`graphic card type_integrated graphics`:`RAM type_ddr4`                                           
+-`operating system_['no system']`:`operating system_['windows 10 home', 'other']`                  
+-`operating system_['no system']`:`operating system_['windows 10 home']`                           
+-`operating system_['no system']`:`operating system_['windows 10 professional']`                   
+-`operating system_['no system']`:`drive type_hdd`  
+,data=data)
+summary(lm2)
+```
+
+
+```{r}
+#update lm2
+lm2 <- update(lm2, . ~ .
+              -camera:`CPU model_intel core i3`                                                                  
+-camera:`CPU model_intel core i5`  
+
+                                      
+-`operating system_['no system']`:`RAM type_ddr3l` 
+
+                                                                              
+    
+,data=data)
+summary(lm2)
+```
+
+
+```{r}
+lm3=step(lm2,trace=0)
+summary(lm3)
+
+```
+
+
+```{r}
+lm3 <- update(lm2, . ~ . -touchpad:`drive type_ssd`                                                                         
+-touchpad:`drive type_ssd + hdd`                                                                   
+-touchpad:CPU_cores_2  
+
+-numeric_keyboard:camera                                                                           
+-numeric_keyboard:speakers                                                                         
+-numeric_keyboard:resolution1                                                                      
+-numeric_keyboard:resolution2                                                                      
+-numeric_keyboard:`graphic card type_integrated graphics`  
+
+-`drive memory size (GB)`:`CPU model_intel core i5`                                                
+-`drive memory size (GB)`:`CPU model_intel core i7`                                                
+-`drive memory size (GB)`:`RAM type_ddr3l`                                                         
+-`drive memory size (GB)`:`RAM type_ddr4`                                                          
+-`RAM size`:screen                                                                                 
+-`RAM size`:keyboard                                                                               
+-`RAM size`:illuminated_keyboard   
+
+-`CPU clock speed (GHz)`:`operating system_['no system']`                                          
+-`CPU clock speed (GHz)`:`operating system_['windows 10 home', 'other']`                           
+-`CPU clock speed (GHz)`:`operating system_['windows 10 home']
+ 
+,data=data)
+```
+
+
+```{r}
+plot(lm3)
+```
+
+```{r}
+#levene test for homogeneity of variance
+library(car)
+library(MASS)
+lm2=lm(log(buynow_price) ~ ., data = data)
+
+
+
+
+```
+
+
+ 
+
+
+```{r}
+#shapiro wilk test
+shapiro.test(lm2$residuals)
+```
+
+ 
+ 
+```{r}
+#vif values
+library(car)
+library(MASS)
+vif(lm1)
+
+```
+
+```{r}
+p=length(lm2$coefficients)-1
+plot(hatvalues(lm2), rstandard(lm2),
+xlab='Leverage', ylab='Standardized Residuals')
+n <- nrow(data)
+abline(v=2*(p+1)/n, lty=2) # threshold for high leverage
+abline(h=c(-4,4), lty=2) # threshold for outliers
+```
+
+```{r}
+#outlier points
+ind <- which(abs(rstandard(lm2)) > 4)
+ind
+#leverage poimts
+problem = which(abs(hatvalues(lm2))>2*(p+1)/n)
+problem
+```
+```{r}
+influential=which(abs(rstandard(lm2)) > 4 & abs(hatvalues(lm2))>2*(p+1)/n)
+influential
+```
+```{r}
+#view rows 1151, 3564, 3884, 3893, 3939
+data[influential, ]
+
+```
+
+
+```{r}
+#observation 939 in data
+data[939, ]
+```
+
+ 
+ 
+```{r}
+#boxcox method for finding transformation of buynow_price
+library(MASS)
+boxcox(lm1, lambda = seq(-2, 9, by=0.1))
+summary(powerTransform(lm1))
+```
+
+
+ 
+
+
+```{r}
+lm2=step(lm1,trace=0)
+summary(lm2)
+```
+
+
+
+```{r}
+# Example regression model
+ 
+# Get the summary
+model_summary <- summary(lm2)
+
+# Extract the coefficients table
+coef_table <- model_summary$coefficients
+
+# Convert it to a dataframe
+coef_df <- as.data.frame(coef_table)
+
+# Add row names as a column
+coef_df$Predictor <- rownames(coef_df)
+
+# Rename columns for clarity
+names(coef_df) <- c("Estimate", "StdError", "tValue", "pValue", "Predictor")
+
+main_pred= coef_df[0:35,]
+inter_pred= coef_df[36:nrow(coef_df),]
+
+# Filter for significant predictors (e.g., p < 0.05)
+significant_inter <- subset(inter_pred, pValue < 0.3)
+
+# Reorder columns
+allpred=cbind(main_pred, significant_inter)
+
+# View the result
+write.csv(allpred, "C:/Users/rliog/Downloads/allpred.csv", row.names = FALSE)
+```
+
+
+
+
+```{r}
+#list variables in lm2
+columns=names(lm2$coefficients)
+col=list(columns)
+print(col)
+
+```
+
+```{r}
+# Extract variable names (excluding the response)
+model_vars <- all.vars(formula(lm2))[-1]
+
+# Print the list of predictor columns
+#print(model_vars)
+```
+
+```{r}
+plot(lm3)
+```
+
+
+
+```{r}
+#columns in lm2
+columns=names(lm2$coefficients)
+col=list(columns)
+print(col)
+
+```
+```{r}
+data2=data[, model_vars]
+data2$buynow_price=(data$buynow_price)
+#
+
+```
+
+
+```{r}
+#coefficients in lm3
+columns=names(lm3$coefficients)
+col=list(columns)
+print(col)
+length(col)
+```
+
+
+
+```{r}
+lm3=lm(log(buynow_price) ~ .^2, data = data2)
+summary(lm3)
+```
+
+```{r}
+model_vars_2 <- all.vars(formula(lm3))[-1]
+```
+
+
+```{r}
+data3=data[, model_vars_2]
+data3$buynow_price=(data$buynow_price)
+```
+
+
+
+```{r}
+#significant variables in lm3
+columns=names(lm3$coefficients)
+col=list(columns)
+print(col)
+```
+
+
+```{r}
+#create dataframe from summary of lm3
+summary_df <- as.data.frame(summary(lm3)$coefficients)
+# Extract the row names (variable names)
+variable_names <- rownames(summary_df)
+# Create a new data frame with variable names and their corresponding p-values
+p_values_df <- data.frame(Variable = variable_names, P_Value = summary_df[, 4])
+# Filter the data frame to include only variables with p-values less than 0.05
+significant_vars <- p_values_df[p_values_df$P_Value < 0.05, ]
+# Print the significant variables
+print(significant_vars)
+#create list of significant variables
+vars <- significant_vars$Variable
+#create model with vars
+print(vars)
+
+ 
+# Create a new data frame with variable names and their corresponding p-values
+# Filter the data frame to include only variables with p-values less than 0.05
+#create data frame with
+
+```
+
+
+```{r}
+lm4=lm(log(buynow_price) ~ .+ `CPU clock speed (GHz)`:`graphic card type_integrated graphics`	+
+`CPU clock speed (GHz)`:`resolution (px)_1920 x 1280`	+
+`CPU clock speed (GHz)`:`resolution (px)_2880 x 1620`	+
+`CPU clock speed (GHz)`:`operating system_['no system']`	+
+`CPU clock speed (GHz)`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`CPU clock speed (GHz)`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`CPU clock speed (GHz)`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`CPU clock speed (GHz)`:`input devices_['touchpad']`	+
+`CPU clock speed (GHz)`:`RAM type_ddr4`	+
+`CPU clock speed (GHz)`:`screen size_12" - 12.9"`	+
+`CPU clock speed (GHz)`:`screen size_13" - 13.9"`	+
+`CPU clock speed (GHz)`:`screen size_14" - 14.9"`	+
+`CPU clock speed (GHz)`:`screen size_15" - 15.9"`	+
+`CPU clock speed (GHz)`:`screen size_17" - 17.9"`	+
+`drive memory size (GB)`:`RAM size_32 gb`	+
+`drive memory size (GB)`:`operating system_['no system']`	+
+`drive memory size (GB)`:`operating system_['windows 10 home', 'other']`	+
+`drive memory size (GB)`:`drive type_hdd`	+
+`drive memory size (GB)`:`drive type_hybrid`	+
+`drive memory size (GB)`:`drive type_ssd`	+
+`drive memory size (GB)`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`drive memory size (GB)`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`graphic card type_integrated graphics`:`operating system_['windows 10 home', 'other']`+	+
+`graphic card type_integrated graphics`:`operating system_['windows 10 professional']`+	+
+`graphic card type_integrated graphics`:`operating system_['windows 8.1 home 64-bit', 'other']`+	+
+`graphic card type_integrated graphics`:`operating system_['windows 8.1 home 64-bit']`	+
+`graphic card type_integrated graphics`:`drive type_hdd`	+
+`graphic card type_integrated graphics`:`drive type_hybrid`	+
+`graphic card type_integrated graphics`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`graphic card type_integrated graphics`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`graphic card type_integrated graphics`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`graphic card type_integrated graphics`:`screen size_13" - 13.9"`	+
+`resolution (px)_1366 x 768`:`RAM size_8 gb`	+
+`resolution (px)_1366 x 768`:`operating system_['windows 10 home', 'other']`	+
+`resolution (px)_1366 x 768`:`drive type_hdd`	+
+`resolution (px)_1366 x 768`:`drive type_ssd`	+
+`resolution (px)_1366 x 768`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`resolution (px)_3840 x 2160`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`resolution (px)_3840 x 2160`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`resolution (px)_3840 x 2160`:`screen size_13" - 13.9"`	+
+`RAM size_2 gb`:`operating system_['windows 8.1 home 64-bit', 'other']`	+
+`RAM size_2 gb`:`input devices_['touchpad']`	+
+`RAM size_20 gb`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`RAM size_32 gb`:`operating system_['no system']`	+
+`RAM size_32 gb`:`drive type_ssd`	+
+`RAM size_4 gb`:`operating system_['windows 8.1 home 64-bit', 'other']`	+
+`RAM size_4 gb`:`drive type_hdd`	+
+`RAM size_4 gb`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`RAM size_6 gb`:`drive type_ssd`	+
+`RAM size_6 gb`:`screen size_14" - 14.9"`	+
+`RAM size_8 gb`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`operating system_['no system']`:`drive type_hdd`	+
+`operating system_['no system']`:`drive type_ssd`	+
+`operating system_['no system']`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`operating system_['no system']`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`operating system_['no system']`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`operating system_['no system']`:`screen size_14" - 14.9"`	+
+`operating system_['no system']`:`screen size_15" - 15.9"`	+
+`operating system_['windows 10 home', 'other']`:`drive type_hdd`	+
+`operating system_['windows 10 home', 'other']`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`operating system_['windows 10 home', 'other']`:`RAM type_ddr4`	+
+`operating system_['windows 10 home', 'other']`:`screen size_13" - 13.9"`	+
+`operating system_['windows 10 home', 'other']`:`screen size_15" - 15.9"`	+
+`operating system_['windows 10 home', 'other']`:`screen size_17" - 17.9"`	+
+`operating system_['windows 10 professional']`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`operating system_['windows 7 professional 64-bit', 'windows 10 professional']`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`operating system_['windows 7 professional 64-bit']`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`operating system_['windows 7 professional 64-bit']`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`operating system_['windows 8.1 home 64-bit', 'other']`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`operating system_['windows 8.1 home 64-bit', 'other']`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`operating system_['windows 8.1 home 64-bit', 'other']`:`screen size_13" - 13.9"`	+
+`operating system_['windows 8.1 home 64-bit', 'other']`:`screen size_15" - 15.9"`	+
+`operating system_['windows 8.1 home 64-bit', 'other']`:`screen size_17" - 17.9"`	+
+`drive type_hdd`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`	+
+`drive type_hdd`:`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`	+
+`drive type_hdd`:`input devices_['touchpad']`	+
+`drive type_hdd`:`screen size_13" - 13.9"`	+
+`drive type_hybrid`:`screen size_13" - 13.9"`	+
+`drive type_ssd`:`input devices_['keyboard', 'touchpad', 'numeric keyboard']`	+
+`drive type_ssd`:`screen size_13" - 13.9"`	+
+`drive type_ssd`:`screen size_15" - 15.9"`	+
+`drive type_ssd`:`screen size_17" - 17.9"`	+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`:`RAM type_ddr4`	+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`:`RAM type_ddr4`	+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`:`screen size_12" - 12.9"`	+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`:`screen size_13" - 13.9"`	+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard']`:`screen size_14" - 14.9"`	+
+`input devices_['touchpad']`:`RAM type_ddr4`	+
+`input devices_['touchpad']`:`screen size_13" - 13.9"`	+
+`input devices_['touchpad']`:`screen size_14" - 14.9"`	+
+`input devices_['touchpad']`:`screen size_15" - 15.9"`	+
+`input devices_['touchpad']`:`screen size_17" - 17.9"`	+
+`RAM type_ddr4`:`screen size_15" - 15.9"`	
+, data = data2)
+summary(lm4)
+```
+
+
+
+
+```{r}
+lm6=lm(buynow_price ~ `CPU clock speed (GHz)`+
+`resolution (px)_3840 x 2160 RAM type_ddr4`+
+`CPU clock speed (GHz) input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`+
+`drive memory size (GB) drive type_ssd`+
+`CPU clock speed (GHz) resolution (px)_1366 x 768`+
+`RAM size_32 gb`+
+`CPU clock speed (GHz) RAM size_4 gb`+
+`operating system_['windows 10 professional'] input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`CPU clock speed (GHz) RAM size_16 gb`+
+`CPU clock speed (GHz) RAM size_64 gb`+
+`RAM size_2 gb`+
+`RAM size_64 gb input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`RAM size_64 gb`+
+`drive memory size (GB) RAM size_64 gb`+
+`RAM size_64 gb screen size_17" - 17.9"`+
+`graphic card type_integrated graphics RAM size_2 gb`+
+`operating system_['windows 10 professional'] drive type_ssd`+
+`resolution (px)_3840 x 2160 input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`resolution (px)_3840 x 2160 screen size_17" - 17.9"`+
+`resolution (px)_2560 x 1440 RAM size_16 gb`+
+`input devices_['touchpad'] screen size_13" - 13.9"`+
+`operating system_['no system'] screen size_17" - 17.9"`+
+`resolution (px)_1920 x 1280 drive type_hdd`+
+`input devices_['touchpad']`+
+`graphic card type_integrated graphics operating system_['windows 10 professional']`+
+`resolution (px)_1366 x 768 RAM size_4 gb`+
+`drive memory size (GB) RAM size_6 gb`+
+`RAM size_8 gb operating system_['no system']`+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`+
+`resolution (px)_2160 x 1440`+
+`CPU clock speed (GHz) resolution (px)_2160 x 1440`+
+`graphic card type_integrated graphics resolution (px)_2160 x 1440`+
+`resolution (px)_2160 x 1440 RAM size_8 gb`+
+`resolution (px)_2160 x 1440 drive type_ssd`+
+`resolution (px)_2160 x 1440 screen size_12" - 12.9"`+
+`drive memory size (GB) resolution (px)_2160 x 1440`+
+`RAM type_ddr4 screen size_12" - 12.9"`+
+`RAM size_8 gb input devices_['keyboard', 'touchpad', 'numeric keyboard']`+
+`operating system_['windows 10 professional'] screen size_17" - 17.9"`+
+`RAM type_ddr4 screen size_17" - 17.9"`+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard'] screen size_15" - 15.9"`+
+`RAM type_ddr4 screen size_13" - 13.9"`+
+`drive memory size (GB) multimedia_['camera', 'microphone']`+
+`operating system_['windows 10 professional'] screen size_13" - 13.9"`+
+`multimedia_['camera', 'microphone'] RAM type_ddr4`+
+`RAM size_8 gb multimedia_['camera', 'microphone']`+
+`resolution (px)_3840 x 2160 multimedia_['camera', 'microphone']`+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard'] multimedia_['camera', 'microphone']`+
+`drive type_ssd multimedia_['camera', 'microphone']`+
+`multimedia_['camera', 'microphone'] screen size_13" - 13.9"`+
+`graphic card type_integrated graphics multimedia_['camera', 'microphone']`+
+`multimedia_['camera', 'microphone']`+
+`drive memory size (GB)`+
+`drive type_ssd screen size_14" - 14.9"`+
+`CPU clock speed (GHz) input devices_['touchpad', 'illuminated keyboard', 'numeric keyboard']`+
+`resolution (px)_3840 x 2160 operating system_['no system']`+
+`graphic card type_integrated graphics input devices_['touchpad']`+
+`drive type_hybrid input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`+
+`drive memory size (GB) resolution (px)_3200 x 1800`+
+`RAM type_ddr4`+
+`drive memory size (GB) drive type_hdd`+
+`operating system_['windows 10 home', 'other']`+
+`RAM size_8 gb screen size_14" - 14.9"`+
+`resolution (px)_3840 x 2160 operating system_['windows 10 professional']`+
+`input devices_['keyboard', 'touchpad', 'numeric keyboard'] screen size_15" - 15.9"`+
+`operating system_['windows 10 home', 'other'] input devices_['keyboard', 'touchpad', 'numeric keyboard']`+
+`operating system_['windows 10 home', 'other'] drive type_hdd`+
+`resolution (px)_2880 x 1620 screen size_15" - 15.9"`+
+`resolution (px)_2880 x 1620`+
+`resolution (px)_2880 x 1620 RAM size_8 gb`+
+`operating system_['windows 8.1 home 64-bit', 'other'] input devices_['keyboard', 'touchpad', 'numeric keyboard']`+
+`RAM size_32 gb operating system_['no system']`+
+`RAM size_4 gb input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`+
+`graphic card type_integrated graphics input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard'] screen size_17" - 17.9"`+
+`graphic card type_integrated graphics input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard']`+
+`CPU clock speed (GHz) graphic card type_integrated graphics`+
+`operating system_['windows 7 professional 64-bit'] input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`drive memory size (GB) screen size_14" - 14.9"`+
+`screen size_14" - 14.9"`+
+`graphic card type_integrated graphics screen size_14" - 14.9"`+
+`RAM size_8 gb screen size_13" - 13.9"`+
+`RAM size_20 gb RAM type_ddr4`+
+`RAM size_20 gb`+
+`operating system_['windows 10 professional'] drive type_hdd`+
+`resolution (px)_1920 x 1280 input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`RAM size_8 gb input devices_['keyboard', 'touchpad', 'illuminated keyboard']`+
+`CPU clock speed (GHz) input devices_['touchpad']`+
+`CPU clock speed (GHz) screen size_14" - 14.9"`+
+`operating system_['windows 7 professional 64-bit'] screen size_15" - 15.9"`+
+`graphic card type_integrated graphics input devices_['keyboard', 'touchpad', 'numeric keyboard']`+
+`resolution (px)_1366 x 768 operating system_['windows 10 professional']`+
+`RAM size_16 gb operating system_['windows 10 professional']`+
+`RAM size_8 gb screen size_17" - 17.9"`+
+`RAM size_16 gb screen size_17" - 17.9"`+
+`input devices_['keyboard', 'touchpad', 'illuminated keyboard', 'numeric keyboard'] screen size_17" - 17.9"`
+, data = data)
+summary(lm6)
+```
+```{r}
+#read in data
+data3 <- read_csv("C:/Users/rliog/Downloads/datasets (1)/datasets/test_dataset.csv")
+
+```
+```{r}
+lm5=lm(buynow_price~)
+```
+
+```{r}
+plot(lm4)
+```
+
+
+```{r}
+lm5=step(lm4)
+summary(lm5)
+```
+
+
+
+
+```{r}
+#coefficients in lm4
+columns=names(lm4$coefficients)
+col=list(columns)
+## of columns
+print(col)
+length(col)
+
+```
+
+
+
+```{r}
+plot(lm5)
+```
+
+
+```{r}
+lm5=step(lm4,trace=0)
+summary(lm5 )
+```
+
+
+
+
+```{r}
+#create all interaction combinations and add columns to data2
+for (i in 1:length(vars)) {
+  for (j in (i+1):length(vars)) {
+    data3[paste(vars[i], vars[j], sep = "_")] <- data3[[vars[i]]] * data3[[vars[j]]]
+  }
+}
+
+
+
+
+
+```
+
+
+
+```{r}
+lm6=lm(log(buynow_price) ~ ., data = data3)
+summary(lm6)
+```
+
+
+
+```{r}
+lm4=step(lm3,trace=0)
+```
+
+```{r}
+plot(lm3)
+```
+
+
+
+```{r}
+AIC(lm3)
+```
+
+
+
+```{r}
+#create data3 using only variables from lm2
+data2=data[, model_vars]
+data2$buynow_price=(data$buynow_price)
+lm3=lm(log(buynow_price) ~ .+`CPU clock speed (GHz)`:`drive memory size (GB)`+`graphic card type_integrated graphics`:`CPU clock speed (GHz)`+`drive memory size (GB)`:`graphic card type_integrated graphics`, data = data2)
+summary(lm3)
+
+```
+
+
+
+```{r}
+#create dataframe with variables in list columns
+data2=data[, model_vars]
+#add buynow_price to data2
+data2$buynow_price=log(data$buynow_price)
+
+```
+
+```{r}
+lm3=lm(log(buynow_price) ~ ., data = data2)
+summary(lm3)
+plot(lm3)
+```
+
+
+```{r}
+qqnorm(lm2$residuals)
+qqline(lm2$residuals)
+```
+
+```{r}
+#shapiro wilk test
+shapiro.test(lm2$residuals)
+```
+
+```{r}
+#get VIF values for predictors
+library(car)
+vif(lm2)
+
+```
+
+
+```{r}
+#check for interactions
+ 
+#build model with all interactions
+lm4=lm(log(buynow_price) ~ .^2, data = data)
+summary(lm4) 
+
+```
+
+```{r}
+#drop all interactions that are not significant
+lm5=step(lm4,trace=0)
+
+```
+
+```{r}
+plot(lm5)
+```
+
+
+
+```{r}
+lm6=lm((buynow_price) ~  , data = data2)
+```
+
+
+
+
+
+
+
+
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+lm5=lm(log(buynow_price) ~ .^2, data = data)
+summary(lm5)
+```
+
+
+```{r}
+library(readr)
+data <- read_csv("C:/Users/rliog/Downloads/train_dataset23.csv")
+lm3= lm(buynow_price ~ `RAM type_ddr4`	+
+`CPU clock speed (GHz)`:`drive memory size (GB)`	+
+`CPU clock speed (GHz)`:`RAM size`	+
+`CPU clock speed (GHz)`:screen	+
+`CPU clock speed (GHz)`:numeric_keyboard	+
+`CPU clock speed (GHz)`:SD_card_reader	+
+`CPU clock speed (GHz)`:camera	+
+`CPU clock speed (GHz)`:speakers	+
+`CPU clock speed (GHz)`:`graphic card type_integrated graphics`	+
+`CPU clock speed (GHz)`:`operating system_['no system']`	+
+`CPU clock speed (GHz)`:`operating system_['windows 10 home', 'other']`	+
+`CPU clock speed (GHz)`:`operating system_['windows 10 home']`	+
+`CPU clock speed (GHz)`:`operating system_['windows 7 professional 64-bit']`	+
+`CPU clock speed (GHz)`:`drive type_hdd`	+
+`CPU clock speed (GHz)`:`drive type_hybrid`	+
+`CPU clock speed (GHz)`:`drive type_ssd`	+
+`CPU clock speed (GHz)`:`drive type_ssd + hdd`	+
+`CPU clock speed (GHz)`:`CPU model_amd a6`	+
+`CPU clock speed (GHz)`:`CPU model_intel celeron dual-core`	+
+`CPU clock speed (GHz)`:`CPU model_intel core i7`	+
+`CPU clock speed (GHz)`:`CPU model_intel pentium dual-core`	+
+`CPU clock speed (GHz)`:`CPU model_intel pentium quad-core`	+
+`CPU clock speed (GHz)`:`RAM type_ddr3l`	+
+`drive memory size (GB)`:`RAM size`	+
+`drive memory size (GB)`:screen	+
+`drive memory size (GB)`:keyboard	+
+`drive memory size (GB)`:illuminated_keyboard	+
+`drive memory size (GB)`:numeric_keyboard	+
+`drive memory size (GB)`:SD_card_reader	+
+`drive memory size (GB)`:`operating system_['no system']`	+
+`drive memory size (GB)`:`operating system_['windows 10 home']`	+
+`drive memory size (GB)`:`operating system_['windows 10 professional']`	+
+`drive memory size (GB)`:`operating system_['windows 7 professional 64-bit']`	+
+`drive memory size (GB)`:`drive type_hdd`	+
+`drive memory size (GB)`:`drive type_hybrid`	+
+`drive memory size (GB)`:`drive type_ssd + hdd`	+
+`drive memory size (GB)`:CPU_cores_2	+
+`drive memory size (GB)`:CPU_cores_4	+
+`drive memory size (GB)`:`CPU model_intel celeron dual-core`	+
+`drive memory size (GB)`:`CPU model_intel core i3`	+
+`drive memory size (GB)`:`CPU model_intel core i5`	+
+`drive memory size (GB)`:`CPU model_intel core i7`	+
+`drive memory size (GB)`:`CPU model_intel pentium dual-core`	+
+`drive memory size (GB)`:`CPU model_intel pentium quad-core`	+
+`drive memory size (GB)`:`RAM type_ddr3l`	+
+`RAM size`:screen	+
+`RAM size`:keyboard	+
+`RAM size`:numeric_keyboard	+
+`RAM size`:SD_card_reader	+
+`RAM size`:speakers	+
+`RAM size`:resolution1	+
+`RAM size`:resolution2	+
+`RAM size`:`operating system_['windows 10 professional']`	+
+`RAM size`:`CPU model_intel celeron dual-core`	+
+`RAM size`:`CPU model_intel core i3`	+
+`RAM size`:`CPU model_intel core i5`	+
+`RAM size`:`CPU model_intel core i7`	+
+`RAM size`:`RAM type_ddr3l`	+
+`RAM size`:`RAM type_ddr4`	+
+screen:keyboard	+
+screen:numeric_keyboard	+
+screen:SD_card_reader	+
+screen:resolution1	+
+screen:resolution2	+
+screen:`graphic card type_integrated graphics`	+
+screen:`operating system_['windows 10 home', 'other']`	+
+screen:`operating system_['windows 10 home']`	+
+screen:`operating system_['windows 10 professional']`	+
+screen:`operating system_['windows 7 professional 64-bit']`	+
+screen:`drive type_hdd`	+
+screen:`drive type_ssd`	+
+screen:`drive type_ssd + hdd`	+
+screen:`CPU model_amd a6`	+
+screen:`CPU model_intel core i3`	+
+screen:`CPU model_intel core i5`	+
+screen:`RAM type_ddr3l`	+
+screen:`RAM type_ddr4`	+
+keyboard:resolution1	+
+keyboard:resolution2	+
+keyboard:`drive type_hdd`	+
+keyboard:`drive type_ssd`	+
+keyboard:`drive type_ssd + hdd`	+
+keyboard:CPU_cores_2	+
+keyboard:CPU_cores_4	+
+keyboard:`CPU model_amd a6`	+
+keyboard:`CPU model_intel core i3`	+
+keyboard:`CPU model_intel core i5`	+
+keyboard:`CPU model_intel core i7`	+
+keyboard:`CPU model_intel pentium dual-core`	+
+keyboard:`CPU model_intel pentium quad-core`	+
+keyboard:`RAM type_ddr3l`	+
+illuminated_keyboard:SD_card_reader	+
+illuminated_keyboard:camera	+
+illuminated_keyboard:speakers	+
+illuminated_keyboard:resolution1	+
+illuminated_keyboard:resolution2	+
+illuminated_keyboard:`graphic card type_integrated graphics`	+
+illuminated_keyboard:`operating system_['no system']`	+
+illuminated_keyboard:`operating system_['windows 10 home']`	+
+illuminated_keyboard:`operating system_['windows 10 professional']`	+
+illuminated_keyboard:`operating system_['windows 7 professional 64-bit']`	+
+illuminated_keyboard:`drive type_hdd`	+
+illuminated_keyboard:`drive type_hybrid`	+
+illuminated_keyboard:`drive type_ssd`	+
+illuminated_keyboard:`drive type_ssd + hdd`	+
+illuminated_keyboard:`CPU model_intel core i3`	+
+illuminated_keyboard:`CPU model_intel core i5`	+
+illuminated_keyboard:`CPU model_intel core i7`	+
+illuminated_keyboard:`CPU model_intel pentium dual-core`	+
+illuminated_keyboard:`RAM type_ddr3l`	+
+illuminated_keyboard:`RAM type_ddr4`	+
+numeric_keyboard:SD_card_reader	+
+numeric_keyboard:speakers	+
+numeric_keyboard:`operating system_['no system']`	+
+numeric_keyboard:`operating system_['windows 10 home', 'other']`	+
+numeric_keyboard:`operating system_['windows 10 home']`	+
+numeric_keyboard:`operating system_['windows 10 professional']`	+
+numeric_keyboard:`operating system_['windows 7 professional 64-bit']`	+
+numeric_keyboard:`drive type_hybrid`	+
+numeric_keyboard:`CPU model_amd a6`	+
+numeric_keyboard:`CPU model_intel celeron`	+
+numeric_keyboard:`CPU model_intel celeron dual-core`	+
+numeric_keyboard:`RAM type_ddr3l`	+
+numeric_keyboard:`RAM type_ddr4`	+
+touchpad:`drive type_hdd`	+
+touchpad:CPU_cores_2	+
+touchpad:CPU_cores_4	+
+SD_card_reader:camera	+
+SD_card_reader:speakers	+
+SD_card_reader:resolution1	+
+SD_card_reader:resolution2	+
+SD_card_reader:`graphic card type_integrated graphics`	+
+SD_card_reader:`drive type_hdd`	+
+SD_card_reader:`drive type_ssd`	+
+SD_card_reader:`drive type_ssd + hdd`	+
+SD_card_reader:`CPU model_amd a6`	+
+SD_card_reader:`CPU model_intel core i3`	+
+SD_card_reader:`CPU model_intel core i5`	+
+SD_card_reader:`CPU model_intel core i7`	+
+SD_card_reader:`RAM type_ddr3l`	+
+camera:`graphic card type_integrated graphics`	+
+camera:`operating system_['windows 10 home', 'other']`	+
+camera:`operating system_['windows 7 professional 64-bit']`	+
+camera:`drive type_hdd`	+
+camera:`drive type_hybrid`	+
+camera:`drive type_ssd`	+
+camera:`drive type_ssd + hdd`	+
+camera:CPU_cores_2	+
+camera:`CPU model_intel core i3`	+
+camera:`CPU model_intel core i5`	+
+camera:`CPU model_intel core i7`	+
+camera:`RAM type_ddr4`	+
+speakers:`graphic card type_integrated graphics`	+
+speakers:`operating system_['windows 10 home', 'other']`	+
+speakers:`drive type_hdd`	+
+speakers:`drive type_ssd`	+
+speakers:`drive type_ssd + hdd`	+
+speakers:CPU_cores_4	+
+speakers:`CPU model_intel celeron`	+
+speakers:`CPU model_intel core i3`	+
+speakers:`RAM type_ddr3l`	+
+speakers:`RAM type_ddr4`	+
+resolution1:resolution2	+
+resolution1:`graphic card type_integrated graphics`	+
+resolution1:`operating system_['no system']`	+
+resolution1:`operating system_['windows 10 home']`	+
+resolution1:`operating system_['windows 10 professional']`	+
+resolution1:`drive type_hdd`	+
+resolution1:`drive type_ssd`	+
+resolution1:`drive type_ssd + hdd`	+
+resolution1:CPU_cores_2	+
+resolution1:CPU_cores_4	+
+resolution1:`CPU model_amd a6`	+
+resolution1:`CPU model_intel celeron dual-core`	+
+resolution1:`CPU model_intel core i3`	+
+resolution1:`CPU model_intel core i5`	+
+resolution1:`CPU model_intel core i7`	+
+resolution2:`graphic card type_integrated graphics`	+
+resolution2:`operating system_['no system']`	+
+resolution2:`operating system_['windows 10 home']`	+
+resolution2:`operating system_['windows 10 professional']`	+
+resolution2:`drive type_hdd`	+
+resolution2:`drive type_ssd`	+
+resolution2:`drive type_ssd + hdd`	+
+resolution2:CPU_cores_2	+
+resolution2:CPU_cores_4	+
+resolution2:`CPU model_amd a6`	+
+resolution2:`CPU model_intel celeron dual-core`	+
+resolution2:`CPU model_intel core i3`	+
+resolution2:`CPU model_intel core i5`	+
+resolution2:`CPU model_intel core i7`	+
+`graphic card type_integrated graphics`:`operating system_['no system']`	+
+`graphic card type_integrated graphics`:`operating system_['windows 10 home']`	+
+`graphic card type_integrated graphics`:`operating system_['windows 7 professional 64-bit']`	+
+`graphic card type_integrated graphics`:`CPU model_intel core i3`	+
+`graphic card type_integrated graphics`:`CPU model_intel core i5`	+
+`graphic card type_integrated graphics`:`CPU model_intel core i7`	+
+`graphic card type_integrated graphics`:`CPU model_intel pentium dual-core`	+
+`operating system_['no system']`:`drive type_hdd`	+
+`operating system_['no system']`:`drive type_hybrid`	+
+`operating system_['no system']`:CPU_cores_2	+
+`operating system_['no system']`:CPU_cores_4	+
+`operating system_['no system']`:`CPU model_intel celeron`	+
+`operating system_['no system']`:`CPU model_intel core i3`	+
+`operating system_['no system']`:`RAM type_ddr3l`	+
+`operating system_['no system']`:`RAM type_ddr4`	+
+`operating system_['windows 10 home', 'other']`:`drive type_hdd`	+
+`operating system_['windows 10 home', 'other']`:`drive type_hybrid`	+
+`operating system_['windows 10 home', 'other']`:`drive type_ssd`	+
+`operating system_['windows 10 home', 'other']`:`drive type_ssd + hdd`	+
+`operating system_['windows 10 home', 'other']`:CPU_cores_2	+
+`operating system_['windows 10 home', 'other']`:`CPU model_intel celeron dual-core`	+
+`operating system_['windows 10 home', 'other']`:`CPU model_intel core i3`	+
+`operating system_['windows 10 home', 'other']`:`CPU model_intel core i5`	+
+`operating system_['windows 10 home', 'other']`:`CPU model_intel core i7`	+
+`operating system_['windows 10 home', 'other']`:`CPU model_intel pentium dual-core`	+
+`operating system_['windows 10 home', 'other']`:`RAM type_ddr3l`	+
+`operating system_['windows 10 home', 'other']`:`RAM type_ddr4`	+
+`operating system_['windows 10 home']`:`drive type_hdd`	+
+`operating system_['windows 10 home']`:`drive type_hybrid`	+
+`operating system_['windows 10 home']`:`drive type_ssd`	+
+`operating system_['windows 10 home']`:`drive type_ssd + hdd`	+
+`operating system_['windows 10 home']`:CPU_cores_2	+
+`operating system_['windows 10 home']`:`CPU model_amd a6`	+
+`operating system_['windows 10 home']`:`CPU model_intel celeron`	+
+`operating system_['windows 10 home']`:`CPU model_intel celeron dual-core`	+
+`operating system_['windows 10 home']`:`CPU model_intel core i3`	+
+`operating system_['windows 10 home']`:`CPU model_intel core i5`	+
+`operating system_['windows 10 home']`:`CPU model_intel pentium dual-core`	+
+`operating system_['windows 10 home']`:`RAM type_ddr4`	+
+`operating system_['windows 10 professional']`:`drive type_hdd`	+
+`operating system_['windows 10 professional']`:`drive type_hybrid`	+
+`operating system_['windows 10 professional']`:`drive type_ssd`	+
+`operating system_['windows 10 professional']`:`drive type_ssd + hdd`	+
+`operating system_['windows 10 professional']`:CPU_cores_2	+
+`operating system_['windows 10 professional']`:`CPU model_amd a6`	+
+`operating system_['windows 10 professional']`:`CPU model_intel celeron`	+
+`operating system_['windows 10 professional']`:`CPU model_intel core i3`	+
+`operating system_['windows 10 professional']`:`CPU model_intel core i7`	+
+`operating system_['windows 10 professional']`:`CPU model_intel pentium dual-core`	+
+`operating system_['windows 10 professional']`:`RAM type_ddr4`	+
+`operating system_['windows 7 professional 64-bit']`:`drive type_hdd`	+
+`operating system_['windows 7 professional 64-bit']`:`drive type_ssd`	+
+`operating system_['windows 7 professional 64-bit']`:`CPU model_amd a6`	+
+`operating system_['windows 7 professional 64-bit']`:`CPU model_intel core i3`	+
+`operating system_['windows 7 professional 64-bit']`:`RAM type_ddr3l`	+
+`drive type_hdd`:CPU_cores_2	+
+`drive type_hdd`:`CPU model_amd a6`	+
+`drive type_hdd`:`CPU model_intel celeron`	+
+`drive type_hdd`:`CPU model_intel core i3`	+
+`drive type_hdd`:`CPU model_intel core i5`	+
+`drive type_hdd`:`CPU model_intel core i7`	+
+`drive type_hdd`:`CPU model_intel pentium dual-core`	+
+`drive type_hdd`:`CPU model_intel pentium quad-core`	+
+`drive type_hdd`:`RAM type_ddr3l`	+
+`drive type_hdd`:`RAM type_ddr4`	+
+`drive type_hybrid`:`CPU model_amd a6`	+
+`drive type_hybrid`:`CPU model_intel core i3`	+
+`drive type_hybrid`:`CPU model_intel core i5`	+
+`drive type_hybrid`:`CPU model_intel core i7`	+
+`drive type_hybrid`:`CPU model_intel pentium dual-core`	+
+`drive type_hybrid`:`RAM type_ddr4`	+
+`drive type_ssd`:`CPU model_amd a6`	+
+`drive type_ssd`:`CPU model_intel celeron`	+
+`drive type_ssd`:`CPU model_intel celeron dual-core`	+
+`drive type_ssd`:`CPU model_intel core i3`	+
+`drive type_ssd`:`CPU model_intel core i5`	+
+`drive type_ssd`:`CPU model_intel core i7`	+
+`drive type_ssd`:`RAM type_ddr3l`	+
+`drive type_ssd`:`RAM type_ddr4`	+
+`drive type_ssd + hdd`:`CPU model_intel core i3`	+
+`drive type_ssd + hdd`:`RAM type_ddr3l`	+
+`drive type_ssd + hdd`:`RAM type_ddr4`	+
+CPU_cores_2:`CPU model_amd a6`	+
+CPU_cores_2:`CPU model_intel celeron dual-core`	+
+`CPU model_amd a6`:`RAM type_ddr3l`	+
+`CPU model_intel celeron`:`RAM type_ddr3l`	+
+`CPU model_intel celeron dual-core`:`RAM type_ddr3l`	+
+`CPU model_intel celeron dual-core`:`RAM type_ddr4`	+
+`CPU model_intel pentium dual-core`:`RAM type_ddr3l`	 
+, data = data)
+summary(lm3)
+```
+
+
+
+
+
+```{r}
+lm5=lm(log(buynow_price) ~.^2, data = data)
+```
+
+
+```{r}
+library(glmnet)
+
+# Create the design matrix with interactions (second-order)
+X <- model.matrix(buynow_price ~ .^2, data = data)[, -1]  # remove intercept
+y <- data$buynow_price
+
+# Ridge example
+ridge_model <- cv.glmnet(X, y, alpha = 0)
+
+# Lasso example
+lasso_model <- cv.glmnet(X, y, alpha = 1)
+
+
+# Use best lambda
+best_lambda <- ridge_model$lambda.min
+
+# Predict on training/test
+pred_train <- predict(ridge_model, s = best_lambda, newx = X)
+R2_train <- 1 - sum((y - pred_train)^2) / sum((y - mean(y))^2)
+R2_train
+ 
+
+
+```
+
+
+```{r}
+
+formula <- buynow_price ~ .^2
+X_test <- model.matrix(formula, data = data_test)[, -1]
+y_test <- data_test$buynow_price
+pred_test <- predict(ridge_model, s = best_lambda, newx = X_test)
+
+# Calculate R² on test set
+rss <- sum((y_test - pred_test)^2)
+tss <- sum((y_test - mean(y_test))^2)
+r2_test <- 1 - rss / tss
+
+print(r2_test)
+```
+```{r}
+#neural network model
+library(nnet)
+library(caret)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(MASS)
+
+```
+
+
+```{r}
+X <- model.matrix(buynow_price ~ .^2, data = data)[, -1]  # remove intercept
+y <- data$buynow_price
+```
+
+
+
+```{r}
+# Install and load necessary package
+#install.packages("nnet")
+library(nnet)
+
+# Normalize function
+normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+# Normalize numeric columns
+num_cols <- sapply(data, is.numeric)
+data_scaled <- data
+data_scaled[num_cols] <- lapply(data[num_cols], normalize)
+
+# Split into train/test
+set.seed(123)
+n <- nrow(data_scaled)
+train_index <- sample(1:n, size = 0.8 * n)
+train_data <- data_scaled[train_index, ]
+data_test  <- data_scaled[-train_index, ]
+
+# Fit neural network
+formula <- buynow_price ~ .^2
+nn_model <- nnet(formula, data = train_data, size = 5, linout = TRUE, decay = 0.01, maxit = 500)
+
+# Predict on test set
+pred <- predict(nn_model, newdata = data_test)
+
+# Compute R² on test set
+y_test <- data_test$buynow_price
+rss <- sum((y_test - pred)^2)
+tss <- sum((y_test - mean(y_test))^2)
+r2 <- 1 - (rss / tss)*((n-1)/(n-p-1))  # Adjusted R²
+
+# Output R²
+print(paste("R-squared on test set:", round(r2, 4)))
+
+```
+
